@@ -235,14 +235,12 @@ int main(int argc, char *argv[])
     {
       printf("NOT OK!\n");
     }
-
-    printf("%d\n", message->message);
   }
   struct sockaddr_in local;
   socklen_t addrlength = sizeof(addrlength);
   getsockname(sockfd, (struct sockaddr *)&local, &addrlength);
 #ifdef DEBUG
-  printf("Host %s, and port %d. Local %s, %d,\n", Desthost, port, inet_ntoa(local.sin_addr),
+  printf("Host %s, and port %d. Local %s, %d.\n", Desthost, port, inet_ntoa(local.sin_addr),
          (int)ntohs(local.sin_port));
 #endif
 
