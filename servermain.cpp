@@ -56,12 +56,6 @@ void checkJobbList(int signum)
   return;
 }
 
-void INThandler(int sig)
-{
-  signal(sig, SIG_IGN);
-  signal(SIGINT,INThandler);
-}
-
 int main(int argc, char *argv[])
 {
 
@@ -149,13 +143,11 @@ int main(int argc, char *argv[])
   /* Regiter a callback function, associated with the SIGALRM signal, which will be raised when the alarm goes of */
   signal(SIGALRM, checkJobbList);
   setitimer(ITIMER_REAL, &alarmTime, NULL); // Start/register the alarm.
-  signal(SIGINT, INThandler);
 
   bool messageChange = false;
-  char buf[128];
   bool clientFound = false;
   int clientNr = 0;
-  int clientInUse = 0;
+  int clientInUse = -1;
   calcProtocol protSend;
   while (terminate == 0)
   {
@@ -166,15 +158,10 @@ int main(int argc, char *argv[])
     {
       printf("Error: Recieve timeout, sending error to client!\n");
     }
-    else
-    {
-      inet_ntop(clientaddr.sin_family, &clientaddr.sin_addr, buf, sizeof(buf));
-      printf("%s %d\n", buf, clientaddr.sin_port);
-    }
 
     if (sizeof(calcMessage) == bytes)
     {
-      if (messageChange)
+      if (!messageChange)
       {
         delete message;
         messageChange = true;
@@ -226,26 +213,23 @@ int main(int argc, char *argv[])
             if (protSend.arith == 1)
             {
               protSend.inResult = protSend.inValue1 + protSend.inValue2;
-              printf("Add %d %d, result: %d\n", protSend.inValue1, protSend.inValue2, protSend.inResult);
             }
             else if (protSend.arith == 2)
             {
               protSend.inResult = protSend.inValue1 - protSend.inValue2;
-              printf("Add %d %d, result: %d\n", protSend.inValue1, protSend.inValue2, protSend.inResult);
             }
             else if (protSend.arith == 3)
             {
               protSend.inResult = protSend.inValue1 * protSend.inValue2;
-              printf("Add %d %d, result: %d\n", protSend.inValue1, protSend.inValue2, protSend.inResult);
             }
             else if (protSend.arith == 4)
             {
               protSend.inResult = protSend.inValue1 / protSend.inValue2;
-              printf("Add %d %d, result: %d\n", protSend.inValue1, protSend.inValue2, protSend.inResult);
             }
           }
 
-          protSend.id = clientNr++;
+          protSend.id = clientNr;
+          clientNr++;
           protSend.type = 1;
           protSend.major_version = 1;
           protSend.minor_version = 0;
@@ -267,14 +251,14 @@ int main(int argc, char *argv[])
       if ((sentbytes = sendto(sockfd, &protSend, sizeof(protSend), 0, (struct sockaddr *)&clientaddr,
                               client_len)) == -1)
       {
-        printf("Error: Couldnt send to the server.");
+        printf("Error: Couldnt send to the client.\n");
       }
     }
     else if (bytes == sizeof(calcProtocol))
     {
       for (size_t i = 0; i < clients.size() && clientFound == false; i++)
       {
-        if (clients.at(i).addr.sin_addr.s_addr == clientaddr.sin_addr.s_addr && clients.at(i).addr.sin_port == clientaddr.sin_port && ntohl((clients.at(i).work.id) == ntohl(protMsg.id)))
+        if (clients.at(i).addr.sin_addr.s_addr == clientaddr.sin_addr.s_addr && clients.at(i).addr.sin_port == clientaddr.sin_port && ntohl(clients.at(i).work.id) == ntohl(protMsg.id))
         {
           clientFound = true;
           clientInUse = i;
@@ -282,12 +266,12 @@ int main(int argc, char *argv[])
       }
       if (clientFound == true)
       {
+        clients.at(clientInUse).work.arith = ntohl(clients.at(clientInUse).work.arith);
         message->type = 2;
         message->major_version = 1;
         message->minor_version = 0;
         message->protocol = 17;
         protMsg.inResult = ntohl(protMsg.inResult);
-        protSend.arith = ntohl(protSend.arith);
         message->major_version = htons(message->major_version);
         message->minor_version = htons(message->minor_version);
         message->type = htons(message->type);
@@ -324,11 +308,12 @@ int main(int argc, char *argv[])
       if ((sentbytes = sendto(sockfd, message, sizeof(*message), 0, (struct sockaddr *)&clientaddr,
                               client_len)) == -1)
       {
-        printf("Error: Couldnt send to the server.");
+        printf("Error, couldnt send to client!\n");
       }
       else if(clientFound == true)
       {
         clients.erase(clients.begin() + clientInUse);
+        clientInUse = -1;
       }
     }
 

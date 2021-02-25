@@ -118,13 +118,11 @@ int main(int argc, char *argv[])
     }
     tries++;
   }
-
   if (bytes == -1)
   {
     printf("Error:Couldnt recieve from server.\n");
     exit(0);
   }
-  sleep(5);
   if (sizeof(calcMessage) == bytes)
   {
     delete message;
