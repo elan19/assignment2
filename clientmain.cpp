@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <netdb.h>
 #include <time.h>
+#include <signal.h>
 /* You will to add includes here */
 
 // Included to get the support library
@@ -16,6 +17,12 @@
 #include "calcLib.h"
 
 #include "protocol.h"
+
+
+void INThandler(int sig)
+{
+  exit(0);
+}
 
 int main(int argc, char *argv[])
 {
@@ -91,7 +98,8 @@ int main(int argc, char *argv[])
 
   printf("Sent message to server.\n");
 
-  setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(tv));
+  setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+  signal(SIGINT, INThandler);
 
   while (bytes <= 0 && tries < 3)
   {
@@ -99,7 +107,6 @@ int main(int argc, char *argv[])
     if ((sentbytes = sendto(sockfd, &msg, sizeof(msg), 0, p->ai_addr, p->ai_addrlen)) == -1)
     {
       printf("Error: Couldnt send to the server.");
-      close(sockfd);
       exit(0);
     }
 
@@ -115,10 +122,9 @@ int main(int argc, char *argv[])
   if (bytes == -1)
   {
     printf("Error:Couldnt recieve from server.\n");
-    close(sockfd);
     exit(0);
   }
-
+  sleep(5);
   if (sizeof(calcMessage) == bytes)
   {
     delete message;
@@ -132,12 +138,11 @@ int main(int argc, char *argv[])
         message->minor_version == 0)
     {
       printf("Wrong type recieved. Expected a calcProtocol!\n");
-      close(sockfd);
       exit(0);
     }
     printf("Error: \n");
   }
-  else
+  else if(bytes == sizeof(calcProtocol))
   {
     protMsg.arith = ntohl(protMsg.arith);
     protMsg.inValue1 = ntohl(protMsg.inValue1);
@@ -200,14 +205,12 @@ int main(int argc, char *argv[])
 
     tries = 0;
     bytes = -1;
-
     while (bytes <= 0 && tries < 3)
     {
 
       if ((sentbytes = sendto(sockfd, &protMsg, sizeof(protMsg), 0, p->ai_addr, p->ai_addrlen)) == -1)
       {
         printf("Error: Couldnt send to the server.");
-        close(sockfd);
         exit(0);
       }
 
@@ -222,7 +225,6 @@ int main(int argc, char *argv[])
     if (bytes == -1)
     {
       printf("Error:Couldnt recieve from server.\n");
-      close(sockfd);
       exit(0);
     }
     message->message = ntohl(message->message);
@@ -231,9 +233,12 @@ int main(int argc, char *argv[])
     {
       printf("OK!\n");
     }
-    else
+    else if(message->message == 2)
     {
       printf("NOT OK!\n");
+    }
+    else{
+      printf("N/A\n");
     }
   }
   struct sockaddr_in local;

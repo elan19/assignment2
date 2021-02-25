@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <netdb.h>
 #include <vector>
+#include <signal.h>
 
 /* You will to add includes here */
 
@@ -55,6 +56,12 @@ void checkJobbList(int signum)
   return;
 }
 
+void INThandler(int sig)
+{
+  signal(sig, SIG_IGN);
+  signal(SIGINT,INThandler);
+}
+
 int main(int argc, char *argv[])
 {
 
@@ -78,7 +85,6 @@ int main(int argc, char *argv[])
     exit(0);
   }
 
-  int port = atoi(Destport);
   int sockfd;
   addrinfo sa, *si, *p;
   sa.ai_family = AF_INET;
@@ -86,7 +92,6 @@ int main(int argc, char *argv[])
   sa.ai_protocol = 17;
   initCalcLib();
 
-  calcMessage msg;
   calcMessage *message = new calcMessage{};
   calcProtocol protMsg;
 
@@ -144,6 +149,7 @@ int main(int argc, char *argv[])
   /* Regiter a callback function, associated with the SIGALRM signal, which will be raised when the alarm goes of */
   signal(SIGALRM, checkJobbList);
   setitimer(ITIMER_REAL, &alarmTime, NULL); // Start/register the alarm.
+  signal(SIGINT, INThandler);
 
   bool messageChange = false;
   char buf[128];
@@ -263,7 +269,6 @@ int main(int argc, char *argv[])
       {
         printf("Error: Couldnt send to the server.");
       }
-      printf("%d\n", protSend.id);
     }
     else if (bytes == sizeof(calcProtocol))
     {
@@ -329,7 +334,5 @@ int main(int argc, char *argv[])
 
     loopCount++;
   }
-
-  printf("done.\n");
   return (0);
 }
