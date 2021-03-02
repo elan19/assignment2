@@ -22,7 +22,6 @@
 #include "protocol.h"
 
 /* Needs to be global, to be rechable by callback and main */
-int loopCount = 0;
 int terminate = 0;
 struct cli
 {
@@ -46,12 +45,6 @@ void checkJobbList(int signum)
     }
   }
   printf("Let me be, I want to sleep.\n");
-
-  if (loopCount > 20)
-  {
-    printf("I had enough.\n");
-    terminate = 1;
-  }
 
   return;
 }
@@ -152,11 +145,10 @@ int main(int argc, char *argv[])
   while (terminate == 0)
   {
     clientFound = false;
-    printf("This is the main loop, %d time.\n", loopCount);
     bytes = recvfrom(sockfd, &protMsg, sizeof(protMsg), 0, (struct sockaddr *)&clientaddr, &client_len);
     if ((bytes) == -1)
     {
-      printf("Error: Recieve timeout, sending error to client!\n");
+      printf("Could not find a client, trying again!\n");
     }
 
     if (sizeof(calcMessage) == bytes)
@@ -317,7 +309,6 @@ int main(int argc, char *argv[])
       }
     }
 
-    loopCount++;
   }
   return (0);
 }
