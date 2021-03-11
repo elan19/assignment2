@@ -131,14 +131,16 @@ int main(int argc, char *argv[])
     message->type = ntohs(message->type);
     message->major_version = ntohs(message->major_version);
     message->minor_version = ntohs(message->minor_version);
-
-    if (message->type == 2 && message->message == 2 && message->major_version == 1 &&
-        message->minor_version == 0)
+    if(message->message == 0)
     {
-      printf("Wrong type recieved. Expected a calcProtocol!\n");
+      printf("Recieved N/A from server, leaving..\n");
       exit(0);
     }
-    printf("Error: \n");
+    else if(message->message == 2)
+    {
+      printf("Recieved NOT OK from server, leaving..\n");
+      exit(0);
+    }
   }
   else if(bytes == sizeof(calcProtocol))
   {

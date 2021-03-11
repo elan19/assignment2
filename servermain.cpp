@@ -42,9 +42,9 @@ void checkJobbList(int signum)
     if (t.tv_sec - clients.at(i).tid.tv_sec > 10)
     {
       clients.erase(clients.begin() + i);
+      printf("Client does not respond, removing it\n");
     }
   }
-  printf("Let me be, I want to sleep.\n");
 
   return;
 }
@@ -142,16 +142,23 @@ int main(int argc, char *argv[])
   int clientNr = 0;
   int clientInUse = -1;
   calcProtocol protSend;
+  calcMessage errorMessage;
+  errorMessage.major_version = htons(1);
+  errorMessage.minor_version = htons(0);
+  errorMessage.protocol = htons(17);
+  errorMessage.type = htons(2);
+  errorMessage.message = htonl(2);
+
   while (terminate == 0)
   {
     clientFound = false;
     bytes = recvfrom(sockfd, &protMsg, sizeof(protMsg), 0, (struct sockaddr *)&clientaddr, &client_len);
     if ((bytes) == -1)
     {
-      printf("Could not find a client, trying again!\n");
+      printf("No client is responing, trying agian.\n");
     }
 
-    if (sizeof(calcMessage) == bytes)
+    else if (sizeof(calcMessage) == bytes)
     {
       if (!messageChange)
       {
@@ -238,12 +245,20 @@ int main(int argc, char *argv[])
           gettimeofday(&clientName.tid, NULL);
           clientName.work = protSend;
           clients.push_back(clientName);
+          if ((sentbytes = sendto(sockfd, &protSend, sizeof(protSend), 0, (struct sockaddr *)&clientaddr,
+                                  client_len)) == -1)
+          {
+            printf("Error: Couldnt send to the client.\n");
+          }
         }
-      }
-      if ((sentbytes = sendto(sockfd, &protSend, sizeof(protSend), 0, (struct sockaddr *)&clientaddr,
-                              client_len)) == -1)
-      {
-        printf("Error: Couldnt send to the client.\n");
+        else
+        {
+          if ((sendto(sockfd, &errorMessage, sizeof(errorMessage), 0, (struct sockaddr *)&clientaddr,
+                                  client_len)) == -1)
+          {
+            printf("Error: Couldnt send to the client.\n");
+          }
+        }
       }
     }
     else if (bytes == sizeof(calcProtocol))
@@ -302,13 +317,12 @@ int main(int argc, char *argv[])
       {
         printf("Error, couldnt send to client!\n");
       }
-      else if(clientFound == true)
+      else if (clientFound == true)
       {
         clients.erase(clients.begin() + clientInUse);
         clientInUse = -1;
       }
     }
-
   }
   return (0);
 }
